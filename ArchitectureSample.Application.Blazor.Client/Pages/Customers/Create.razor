@@ -1,0 +1,118 @@
+﻿@page "/customers/create"
+@using ArchitectureSample.Application.Blazor.Client.Services
+@using ArchitectureSample.Application.Blazor.Client.Dtos
+@using FluentValidation
+@inject ICustomerService CustomerService
+@inject NavigationManager NavigationManager
+@rendermode InteractiveServer
+
+<PageTitle>Create Customer | Architecture Sample</PageTitle>
+
+<MudDialogProvider />
+<MudSnackbarProvider />
+
+<h1>Create Customer</h1>
+<br />
+
+<MudCard>
+	<MudForm Model="@_model" @ref="@_form" Validation="@(_customerValidator.ValidateValue)" ValidationDelay="0">
+		<MudCardContent>
+			<MudTextField @bind-Value="_model.FirstName"
+				      For="@(() => _model.FirstName)"
+				      Immediate="true"
+				      Label="First Name" />
+
+			<MudTextField @bind-Value="_model.LastName"
+				      For="@(() => _model.LastName)"
+				      Immediate="true"
+				      Label="Last Name" />
+
+			<MudDatePicker @bind-date="_model.DateOfBirth"
+				       For="@(() => _model.DateOfBirth)"
+				       Label="Date of Birth" />
+
+
+			<MudTextField @bind-Value="_model.PhoneNumber"
+				      For="@(() => _model.PhoneNumber)"
+				      Immediate="true"
+				      Label="Phone Number" />
+
+			<MudTextField @bind-Value="_model.Email"
+				      For="@(() => _model.Email)"
+				      Immediate="true"
+				      Label="Email" />
+
+			<MudTextField @bind-Value="_model.BankAccount"
+				      For="@(() => _model.BankAccount)"
+				      Immediate="true"
+				      Label="Bank Account" />
+		</MudCardContent>
+	</MudForm>
+	<MudCardActions>
+		<MudButton Variant="Variant.Filled" Color="Color.Primary" Style="margin-right: 10px" OnClick="@(async () => await Submit())">Save</MudButton>
+		<MudButton Variant="Variant.Filled" Color="Color.Secondary" Href="/customers">Cancel</MudButton>
+	</MudCardActions>
+</MudCard>
+
+@code {
+	[Inject] ISnackbar? Snackbar { get; set; }
+
+	MudForm? _form;
+
+	readonly CustomerValidator _customerValidator = new();
+
+	readonly CustomerDto _model = new();
+
+	private async Task Submit()
+	{
+		await _form!.Validate();
+
+		if (_form.IsValid)
+		{
+			_model.DateOfBirth = DateTime.Now.AddYears(-10);
+			var serverResponse = await CustomerService.Create(_model);
+
+			if (serverResponse!.IsError)
+				return;
+			Snackbar?.Add("Customer saved successfully!");
+			NavigationManager.NavigateTo("/customers");
+		}
+	}
+
+	public class CustomerValidator : AbstractValidator<CustomerDto>
+	{
+		public CustomerValidator()
+		{
+			RuleFor(v => v.FirstName)
+				.NotEmpty().WithMessage("Name is required.")
+				.MinimumLength(2).WithMessage("Name must be longer than 2 characters.")
+				.MaximumLength(50).WithMessage("Name must not exceed 50 characters.");
+
+			RuleFor(v => v.LastName)
+				.NotEmpty().WithMessage("LastName is required.")
+				.MinimumLength(2).WithMessage("LastName must be longer than 2 characters.")
+				.MaximumLength(60).WithMessage("LastName must not exceed 60 characters.");
+
+			RuleFor(x => x.DateOfBirth)
+				.GreaterThanOrEqualTo(DateTime.Now.AddYears(-100)).WithMessage($"DateOfBirth should at least greater than or equal to {DateTime.Now.AddYears(-100).ToShortDateString()}.")
+				.LessThanOrEqualTo(DateTime.Now).WithMessage("DateOfBirth must not be greater than now");
+
+			RuleFor(x => x.Email)
+				.NotEmpty().WithMessage("Email address is required.");
+
+			RuleFor(x => x.BankAccount)
+				.NotEmpty().WithMessage("BankAccount is required.")
+				.MinimumLength(10).WithMessage("BankAccount must be longer than 10 characters.")
+				.MaximumLength(20).WithMessage("BankAccount must not exceed 20 characters.");
+
+			RuleFor(x => x.PhoneNumber)
+				.NotEmpty().WithMessage("PhoneNumber is required.");
+		}
+
+		public Func<object, string, Task<IEnumerable<string>>> ValidateValue => async (model, propertyName) =>
+		{
+			var result = await ValidateAsync(ValidationContext<CustomerDto>.CreateWithOptions((CustomerDto)model, x => x.IncludeProperties(propertyName)));
+			return result.IsValid ? Array.Empty<string>() : result.Errors.Select(e => e.ErrorMessage);
+		};
+	}
+}

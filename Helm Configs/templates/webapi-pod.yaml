@@ -1,0 +1,19 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  annotations:
+    kompose.cmd: C:\ProgramData\chocolatey\lib\kubernetes-kompose\tools\kompose.exe convert
+    kompose.version: 1.32.0 (765fde254)
+  labels:
+    io.kompose.network/architecturesample-architecturesamplenetwork: "true"
+    io.kompose.service: webapi
+  name: webapi
+spec:
+  containers:
+    - image: architecturesample:dev
+      name: architecturesample-webapi
+      ports:
+        - containerPort: 3030
+          hostPort: 8080
+          protocol: TCP
+  restartPolicy: OnFailure

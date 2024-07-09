@@ -1,0 +1,51 @@
+FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
+EXPOSE 4848
+
+WORKDIR /src
+
+COPY ["./ArchitectureSample.sln", "ArchitectureSample.sln"]
+
+# Application
+COPY ["./ArchitectureSample.Application.Api/", "ArchitectureSample.Application.Api/"]
+COPY ["./ArchitectureSample.Application.Dtos/", "ArchitectureSample.Application.Dtos/"]
+COPY ["./ArchitectureSample.Application.Queries/", "ArchitectureSample.Application.Queries/"]
+COPY ["./ArchitectureSample.Application.Commands/", "ArchitectureSample.Application.Commands/"]
+
+# Domain
+COPY ["./ArchitectureSample.Domain.Core/", "ArchitectureSample.Domain.Core/"]
+COPY ["./ArchitectureSample.Domain.Entities/", "ArchitectureSample.Domain.Entities/"]
+COPY ["./ArchitectureSample.Domain.Repository/", "ArchitectureSample.Domain.Repository/"]
+COPY ["./ArchitectureSample.Domain.Specification/", "ArchitectureSample.Domain.Specification/"]
+
+# Infrastructure
+COPY ["./ArchitectureSample.Infrastructure.Core/", "ArchitectureSample.Infrastructure.Core/"]
+COPY ["./ArchitectureSample.Infrastructure.Data/", "ArchitectureSample.Infrastructure.Data/"]
+COPY ["./ArchitectureSample.Infrastructure.Cache/", "ArchitectureSample.Infrastructure.Cache/"]
+COPY ["./ArchitectureSample.Infrastructure.Logging/", "ArchitectureSample.Infrastructure.Logging/"]
+COPY ["./ArchitectureSample.Infrastructure.Persistence/", "ArchitectureSample.Infrastructure.Persistence/"]
+
+# Tests
+COPY ["./ArchitectureSample.Tests.Unit/", "ArchitectureSample.Tests.Unit/"]
+COPY ["./ArchitectureSample.Tests.Steps/", "ArchitectureSample.Tests.Steps/"]
+COPY ["./ArchitectureSample.Tests.Features/", "ArchitectureSample.Tests.Features/"]
+COPY ["./ArchitectureSample.Tests.Integration/", "ArchitectureSample.Tests.Integration/"]
+
+# Blazor
+COPY ["./ArchitectureSample.Application.Blazor.Server/", "ArchitectureSample.Application.Blazor.Server/"]
+COPY ["./ArchitectureSample.Application.Blazor.Client/", "ArchitectureSample.Application.Blazor.Client/"]
+
+RUN dotnet restore "./ArchitectureSample.sln"
+
+COPY . .
+
+WORKDIR "/src/ArchitectureSample.Application.Blazor.Server"
+
+RUN dotnet build "./ArchitectureSample.Application.Blazor.Server.csproj" -c Release -o /app/build
+
+FROM build AS publish
+RUN dotnet publish "./ArchitectureSample.Application.Blazor.Server.csproj" -c Release -o /app/publish
+
+FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS final
+WORKDIR /app
+COPY --from=publish /app/publish .
+ENTRYPOINT ["dotnet", "ArchitectureSample.Application.Blazor.Server.dll"]

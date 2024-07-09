@@ -1,0 +1,119 @@
+﻿@page "/customers"
+@using ArchitectureSample.Application.Blazor.Client.Dtos
+@inject Services.ICustomerService CustomerService
+@inject NavigationManager UriHelper
+@inject IDialogService DialogService
+@rendermode InteractiveServer
+
+<MudDialogProvider />
+<MudSnackbarProvider />
+
+<PageTitle>Customers | Architecture Sample </PageTitle>
+
+<MudText Typo="Typo.h3" GutterBottom="true">Customers</MudText>
+<br />
+
+<MudButton Color="Color.Primary" Variant="Variant.Filled" Href="/customers/create">Create</MudButton>
+<br />
+
+<style>
+	.my-custom-class {
+		backdrop-filter: blur(4px);
+	}
+</style>
+
+<MudTable ServerData="@(new Func<TableState, Task<TableData<CustomerDto>>>(ServerReload))"
+	  Dense="true" Hover="true" @ref="_table">
+	<ToolBarContent>
+		<MudText Typo="Typo.h6">Search in first name</MudText>
+		<MudSpacer />
+		<MudTextField T="string" ValueChanged="@(OnSearch)" Placeholder="Search" Adornment="Adornment.Start"
+			      AdornmentIcon="@Icons.Material.Filled.Search" IconSize="Size.Medium" Class="mt-0"></MudTextField>
+	</ToolBarContent>
+	<HeaderContent>
+		<MudTh><MudTableSortLabel T="CustomerDto" SortLabel="FirstName">First Name</MudTableSortLabel></MudTh>
+		<MudTh><MudTableSortLabel T="CustomerDto" SortLabel="LastName">Last Name</MudTableSortLabel></MudTh>
+		<MudTh><MudTableSortLabel T="CustomerDto" SortLabel="DateOfBirth">Date of Birth</MudTableSortLabel></MudTh>
+		<MudTh><MudTableSortLabel T="CustomerDto" SortLabel="PhoneNumber">Phone Number</MudTableSortLabel></MudTh>
+		<MudTh><MudTableSortLabel T="CustomerDto" SortLabel="Email">Email</MudTableSortLabel></MudTh>
+		<MudTh><MudTableSortLabel T="CustomerDto" SortLabel="BankAccount">Bank Account</MudTableSortLabel></MudTh>
+		<MudTh><MudTableSortLabel T="CustomerDto" InitialDirection="SortDirection.Ascending" SortLabel="Created">Creation Date</MudTableSortLabel></MudTh>
+		<MudTh>Command(s)</MudTh>
+	</HeaderContent>
+	<RowTemplate>
+		<MudTd DataLabel="First Name">@context.FirstName</MudTd>
+		<MudTd DataLabel="Last Name">@context.LastName</MudTd>
+		<MudTd DataLabel="Date of Birth">@context.DateOfBirth!.Value.ToString("D")</MudTd>
+		<MudTd DataLabel="Phone Number">@context.PhoneNumber</MudTd>
+		<MudTd DataLabel="Email">@context.Email</MudTd>
+		<MudTd DataLabel="Bank Account">@context.BankAccount</MudTd>
+		<MudTd DataLabel="Created">@context.Created.ToString("MM/dd/yyyy hh:mm:ss")</MudTd>
+		<MudTd DataLabel="Command(s)">
+			<MudButton Color="Color.Warning" Variant="Variant.Filled" Href="@($"/customers/edit/{context.Id}")">Update</MudButton>
+			<MudButton Color="Color.Secondary" Variant="Variant.Filled" @onclick="@(() => DeleteCustomer(context))">Delete</MudButton>
+		</MudTd>
+	</RowTemplate>
+	<NoRecordsContent>
+		<MudText>No matching records found</MudText>
+	</NoRecordsContent>
+	<LoadingContent>
+		<MudText>Loading...</MudText>
+	</LoadingContent>
+	<PagerContent>
+		<MudTablePager PageSizeOptions="new[]{5,10}" />
+	</PagerContent>
+</MudTable>
+
+
+@code {
+	private MudTable<CustomerDto>? _table;
+
+	private int _totalItems;
+	private string? _searchString;
+
+	private async Task<TableData<CustomerDto>> ServerReload(TableState state)
+	{
+		var request = new QueryApiRequest
+			{
+				Page = state.Page + 1,
+				PageSize = state.PageSize,
+				Filters = !string.IsNullOrWhiteSpace(_searchString)
+						? new List<FilterModel> { new("FirstName", "Contains", _searchString!) }
+						: new List<FilterModel>()
+			};
+
+		request.Sorts = state.SortDirection switch
+		{
+			SortDirection.Descending => new List<string> { state.SortLabel + "Desc" },
+			SortDirection.Ascending => new List<string> { state.SortLabel },
+			_ => request.Sorts
+		};
+
+		var serverResponse = await CustomerService.Get(request);
+
+		_totalItems = serverResponse?.Data?.TotalItems ?? 0;
+
+		return new TableData<CustomerDto> { TotalItems = _totalItems, Items = serverResponse?.Data?.Items };
+	}
+
+	private void OnSearch(string text)
+	{
+		_searchString = text;
+		_table?.ReloadServerData();
+	}
+
+	async Task DeleteCustomer(CustomerDto customerDto)
+	{
+		var parameters = new DialogParameters<Dialog> { { x => x.CustomerDto, customerDto } };
+		var options = new DialogOptions { ClassBackground = "my-custom-class", Position = DialogPosition.TopCenter };
+
+		var dialog = await DialogService.ShowAsync<Dialog>("Delete Customer", parameters, options);
+		var result = await dialog.Result;
+
+		if (!result.Canceled)
+		{
+			await Task.Delay(200);
+			await _table?.ReloadServerData()!;
+		}
+	}
+}

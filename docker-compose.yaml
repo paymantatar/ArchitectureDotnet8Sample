@@ -1,0 +1,146 @@
+version: '3.8'
+
+networks:
+  architecturesamplenetwork:       
+
+volumes:
+  RedisData:
+    driver: local
+
+services:
+  SqlServerInstance:
+    container_name: ArchitectureSample-SqlServerInstance
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    ports:
+      - 8002:1433
+    environment:
+      - ACCEPT_EULA=${ACCEPT_EULA}
+      - MSSQL_SA_PASSWORD=${MSSQL_SA_PASSWORD}
+    networks:
+      - architecturesamplenetwork
+    healthcheck:
+      test: ["CMD", "/opt/mssql-tools/bin/sqlcmd", "-Usa", "-P${MSSQL_SA_PASSWORD}", "-Q", "select @@version"]
+      interval: 30s
+      retries: 10
+      start_period: 30s
+
+  WebApi:
+    container_name: ArchitectureSample-WebApi
+    image: architecturesample:dev
+    environment:
+      - ConnectionStrings.SqlServer="Server=SqlServerInstance;Database=ArchitectureSample;User Id=sa;Password=${MSSQL_SA_PASSWORD};TrustServerCertificate=True"
+    ports:
+      - "${WebApi_Port}:3030"
+    build:
+      context: .
+      dockerfile: Dockerfile
+    depends_on:
+      RedisInstance:
+        condition: "service_healthy"
+      MongoInstance:
+        condition: "service_healthy"
+      SqlServerInstance:
+        condition: "service_healthy"
+    restart: on-failure
+    networks:
+      - architecturesamplenetwork
+    healthcheck:
+      test: curl --fail http://localhost:3030/HealthChecks || exit 1
+      interval: 10s
+      retries: 10
+      start_period: 30s
+
+  BlazorClient:
+    container_name: ArchitectureSample-BlazorClient
+    image: architecturesample/blazor/client:dev
+    ports:
+      - "9191:80"
+    build:
+      context: .
+      dockerfile: Dockerfile-Blazor-Client
+    depends_on:
+      WebApi:
+        condition: "service_healthy"
+    networks:
+      - architecturesamplenetwork
+  
+  BlazorServer:
+    container_name: ArchitectureSample-BlazorServer
+    image: architecturesample/blazor/server:dev
+    ports:
+      - "9091:4848"
+    build:
+      context: .
+      dockerfile: Dockerfile-Blazor-Server
+    depends_on:
+      - BlazorClient
+    networks:
+      - architecturesamplenetwork
+  
+  RedisInstance:
+    container_name: ArchitectureSample-Redis
+    image: redis:latest
+    restart: always
+    ports:
+      - '3232:6379'
+    volumes: 
+      - RedisData:/data
+    networks:
+      - architecturesamplenetwork
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 60s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  MongoInstance:
+    container_name: ArchitectureSample-Mongo
+    image: mongo:latest
+    restart: always
+    ports:
+      - '27027:27017'
+    networks:
+      - architecturesamplenetwork
+    healthcheck:
+      test: echo 'db.runCommand("ping").ok' | mongosh localhost:27017/test --quiet
+      interval: 60s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  PrometheusInstance:
+    image: prom/prometheus
+    container_name: ArchitectureSample-Prometheus
+    ports:
+      - '2390:9090'
+    volumes:
+      - "./MonitoringFiles/prometheus.yml:/etc/prometheus/prometheus.yml"
+    networks:
+      - architecturesamplenetwork
+    depends_on:
+      - WebApi
+    restart: on-failure
+  
+  NodeExporterInstance:
+    container_name: ArchitectureSample-NodeExporter
+    image: prom/node-exporter
+    networks:
+      - architecturesamplenetwork
+    ports:
+      - 5454:9100
+  
+  GrafanaInstance:
+    image: 'grafana/grafana:latest'
+    container_name: ArchitectureSample-Grafana
+    ports:
+      - '3000:3000'
+    depends_on:
+      - PrometheusInstance
+    volumes:
+      - ./MonitoringFiles/provisioning:/etc/grafana/provisioning
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=${GF_SECURITY_ADMIN_PASSWORD}
+    networks:
+      - architecturesamplenetwork
+    restart: on-failure

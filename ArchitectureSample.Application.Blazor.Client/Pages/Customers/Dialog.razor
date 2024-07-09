@@ -1,0 +1,43 @@
+@using ArchitectureSample.Application.Blazor.Client.Dtos
+@using ArchitectureSample.Application.Blazor.Client.Services
+@inject ICustomerService CustomerService
+@inject ISnackbar Snackbar
+
+<MudDialog Style="min-width: 400px">
+	<TitleContent>
+		<MudText Typo="Typo.h6">
+			<MudIcon Icon="@Icons.Material.Filled.DeleteForever" Class="mr-3 mb-n1" />
+			Delete customer?
+		</MudText>
+	</TitleContent>
+	<DialogContent>
+		<MudTextField Value="@CustomerDto.Id.ToString()" Label="ID" ReadOnly="true" />
+		<MudTextField Value="@CustomerDto.FirstName" Label="First Name" ReadOnly="true" />
+		<MudTextField Value="@CustomerDto.LastName" Label="Last Name" ReadOnly="true" />
+		<MudTextField Value="@CustomerDto.Email" Label="Email" ReadOnly="true" />
+		<MudTextField Value="@CustomerDto.BankAccount" Label="Bank Account" ReadOnly="true" />
+		<MudTextField Value="@CustomerDto.PhoneNumber" Label="Phone Number" ReadOnly="true" />
+	</DialogContent>
+	<DialogActions>
+		<MudButton OnClick="Cancel">Cancel</MudButton>
+		<MudButton Color="Color.Error" OnClick="DeleteCustomer">Delete Customer</MudButton>
+	</DialogActions>
+</MudDialog>
+
+@code {
+	[CascadingParameter] MudDialogInstance? MudDialog { get; set; }
+
+	[Parameter] public CustomerDto CustomerDto { get; set; } = new();
+
+	private void Cancel()
+	{
+		MudDialog?.Cancel();
+	}
+
+	private void DeleteCustomer()
+	{
+		CustomerService.Delete(CustomerDto.Id);
+		Snackbar.Add("Customer Deleted", Severity.Success);
+		MudDialog?.Close(DialogResult.Ok(CustomerDto.Id));
+	}
+}

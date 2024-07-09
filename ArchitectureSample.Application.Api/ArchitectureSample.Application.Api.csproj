@@ -1,0 +1,24 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <UserSecretsId>fb5d59a1-5b5d-4519-b451-782147e993c6</UserSecretsId>
+    <DockerDefaultTargetOS>Linux</DockerDefaultTargetOS>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.VisualStudio.Azure.Containers.Tools.Targets" Version="1.20.1" />
+    <PackageReference Include="prometheus-net.AspNetCore" Version="8.2.1" />
+    <PackageReference Include="Swashbuckle.AspNetCore" Version="6.6.2" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\ArchitectureSample.Application.Commands\ArchitectureSample.Application.Commands.csproj" />
+    <ProjectReference Include="..\ArchitectureSample.Application.Queries\ArchitectureSample.Application.Queries.csproj" />
+    <ProjectReference Include="..\ArchitectureSample.Infrastructure.Data\ArchitectureSample.Infrastructure.Data.csproj" />
+    <ProjectReference Include="..\ArchitectureSample.Infrastructure.Logging\ArchitectureSample.Infrastructure.Logging.csproj" />
+  </ItemGroup>
+
+</Project>

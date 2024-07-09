@@ -1,0 +1,20 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="FluentValidation" Version="11.9.1" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\ArchitectureSample.Application.Dtos\ArchitectureSample.Application.Dtos.csproj" />
+    <ProjectReference Include="..\ArchitectureSample.Domain.Repository\ArchitectureSample.Domain.Repository.csproj" />
+    <ProjectReference Include="..\ArchitectureSample.Infrastructure.Cache\ArchitectureSample.Infrastructure.Cache.csproj" />
+    <ProjectReference Include="..\ArchitectureSample.Infrastructure.Core\ArchitectureSample.Infrastructure.Core.csproj" />
+  </ItemGroup>
+
+</Project>
